@@ -3,11 +3,7 @@ using DemoApplication.Worker.Jobs;
 using DemoApplication.Worker.Metrics;
 using Quartz;
 using Quartz.Impl.Matchers;
-using OpenTelemetry;
-using OpenTelemetry.Metrics;
-using System.Diagnostics.Metrics;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,12 +12,9 @@ builder.AddServiceDefaults();
 builder.Services.AddSingleton<JobMetrics>();
 builder.Services.AddHostedService<Worker>();
 
+// This call is required for the DemoApp.Jobs meter to start being collected and exposed
 builder.Services.AddOpenTelemetry()
-    .WithMetrics(metrics => metrics
-        .AddMeter("DemoApp.Jobs"));
-        // .AddPrometheusExporter());
-
-// builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(9184));
+    .WithMetrics(metrics => metrics.AddMeter("DemoApp.Jobs"));
 
 builder.Services.Configure<QuartzOptions>(options =>
 {
@@ -37,7 +30,6 @@ builder.Services.Configure<QuartzOptions>(options =>
     // options.Scheduling.IgnoreDuplicates = true; // default: false
     // options.Scheduling.OverWriteExistingData = true; // default: true
 });
-
 
 builder.Services.AddQuartz(q =>
 {
