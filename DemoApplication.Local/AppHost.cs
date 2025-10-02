@@ -9,7 +9,7 @@ using var reader = new StreamReader(stream!);
 var quartzSetupScript = reader.ReadToEnd();
 
 var mailDev = builder.AddContainer("maildev", "maildev/maildev")
-    .WithEndpoint(5002, 1080, "http")
+    .WithHttpEndpoint(5002, 1080)
     .WithHttpHealthCheck();
 
 var sqlServer = builder.AddSqlServer("sql");
@@ -25,7 +25,6 @@ var worker = builder.AddProject<Projects.DemoApplication_Worker>("worker")
 var webapp = builder.AddProject<Projects.DemoApplication_Web>("webapp")
     .WithReference(database)
     .WaitFor(database)
-    .WaitFor(mailDev)
-    .WithEndpoint(5001, 8080);
+    .WaitFor(mailDev);
 
 builder.Build().Run();
