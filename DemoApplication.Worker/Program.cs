@@ -42,7 +42,7 @@ builder.Services.AddQuartz(q =>
         options.UseSqlServer(sqlServerOptions => sqlServerOptions.ConnectionStringName = "myDB");
         options.UseSystemTextJsonSerializer();
     });
-    
+
 });
 builder.Services.AddQuartzHostedService(options =>
 {

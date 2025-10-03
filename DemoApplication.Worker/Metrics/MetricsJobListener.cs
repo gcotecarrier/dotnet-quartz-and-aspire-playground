@@ -5,10 +5,10 @@ namespace DemoApplication.Worker.Metrics;
 public class MetricsJobListener(JobMetrics jobMetrics) : IJobListener
 {
     public string Name => nameof(MetricsJobListener);
-    
+
     public Task JobToBeExecuted(IJobExecutionContext context, CancellationToken cancellationToken = new CancellationToken())
     {
-        jobMetrics.JobStarted(context.JobDetail.JobType);
+        jobMetrics.JobStarted(context);
         return Task.CompletedTask;
     }
 
@@ -20,14 +20,8 @@ public class MetricsJobListener(JobMetrics jobMetrics) : IJobListener
     public Task JobWasExecuted(IJobExecutionContext context, JobExecutionException? jobException,
         CancellationToken cancellationToken = new CancellationToken())
     {
-        if (jobException is null)
-        {
-            jobMetrics.JobFinished(context.JobDetail.JobType);
-        }
-        else
-        {
-            jobMetrics.JobFailed(context.JobDetail.JobType);
-        }
+        jobMetrics.JobFinished(context);
+
         return Task.CompletedTask;
     }
 

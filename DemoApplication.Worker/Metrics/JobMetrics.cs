@@ -1,39 +1,67 @@
 using System.Diagnostics.Metrics;
+using Microsoft.Extensions.Diagnostics.Metrics;
+using TagNameAttribute = Microsoft.Extensions.Diagnostics.Metrics.TagNameAttribute;
+
+using Quartz;
 
 namespace DemoApplication.Worker.Metrics;
 
-public class JobMetrics
+
+public record JobContext
 {
-        private readonly Counter<int> _jobsStarted;
-        private readonly Counter<int> _jobsFinished;
-        private readonly Counter<int> _jobsFailed;
-        private readonly UpDownCounter<int> _jobsActive;
+    [TagName("job.type")]
+    public required string JobType;
 
-        public JobMetrics(IMeterFactory meterFactory)
-        {
-            var meter = meterFactory.Create("DemoApp.Jobs");
-            _jobsStarted = meter.CreateCounter<int>("demoapp.jobs.started");
-            _jobsFinished = meter.CreateCounter<int>("demoapp.jobs.finished");
-            _jobsFailed = meter.CreateCounter<int>("demoapp.jobs.failed");
-            _jobsActive = meter.CreateUpDownCounter<int>("demoapp.jobs.active");
-        }
+    [TagName("job.key")]
+    public required string JobKey;
 
-        public void JobStarted(Type jobType)
+    [TagName("trigger.key")]
+    public required string TriggerKey;
+}
+
+public partial class JobMetrics
+{
+    [Counter<int>(typeof(JobContext), Name = "jobs.started")]
+    public static partial JobsStarted CreateJobsStarted(Meter meter);
+
+    [Counter<int>(typeof(JobContext), Name = "jobs.finished")]
+    public static partial JobsFinished CreateJobsFinished(Meter meter);
+
+    [Counter<int>(typeof(JobContext), Name = "jobs.active")]
+    public static partial JobsActive CreateJobsActive(Meter meter);
+
+    private readonly JobsStarted _jobsStarted;
+    private readonly JobsFinished _jobsFinished;
+    private readonly JobsActive _jobsActive;
+    public JobMetrics(IMeterFactory meterFactory)
+    {
+        var meter = meterFactory.Create("DemoApp.Jobs");
+        _jobsStarted = CreateJobsStarted(meter);
+        _jobsFinished = CreateJobsFinished(meter);
+        _jobsActive = CreateJobsActive(meter);
+    }
+
+    public void JobStarted(IJobExecutionContext context)
+    {
+        JobContext properties = new()
         {
-            var context = new KeyValuePair<string, object?>("job.type",jobType.Name);
-            _jobsStarted.Add(1, context);
-            _jobsActive.Add(1, context);
-        }
-        
-        public void JobFinished(Type jobType)
+            JobType = context.JobDetail.JobType.Name,
+            JobKey = context.JobDetail.Key.ToString(),
+            TriggerKey = context.Trigger.Key.ToString(),
+        };
+        _jobsStarted.Add(1, properties);
+        _jobsActive.Add(1, properties);
+    }
+
+    public void JobFinished(IJobExecutionContext context)
+    {
+        JobContext properties = new()
         {
-            var context = new KeyValuePair<string, object?>("job.type",jobType.Name);
-            _jobsFinished.Add(1, context);
-            _jobsActive.Add(-1, context);
-        }
-        
-        public void JobFailed(Type jobType)
-        {
-            _jobsFailed.Add(1, new KeyValuePair<string, object?>("job.type",jobType.Name));
-        }
+            JobType = context.JobDetail.JobType.Name,
+            JobKey = context.JobDetail.Key.ToString(),
+            TriggerKey = context.Trigger.Key.ToString(),
+        };
+        _jobsFinished.Add(1, properties);
+        _jobsActive.Add(-1, properties);
+    }
 }
